@@ -2,58 +2,45 @@
 //  ContentView.swift
 //  Exchange-Traded Habits
 //
-//  Created by Lior on 14.11.2026.
+//  The main page: the portfolio graph on top, the habit entries in a grid below.
 //
 
 import SwiftUI
-import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    // Dummy data for now; later this comes from local storage.
+    private let habits = DummyData.habits
+    private let currency = DummyData.currency
+
+    /// As many columns as fit, each at least 330 wide
+    /// (CSS: `grid-template-columns: repeat(auto-fill, minmax(330px, 1fr))`).
+    private let columns = [GridItem(.adaptive(minimum: 330), spacing: 50, alignment: .top)]
 
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
-            }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-            .toolbar {
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 40) {
+                PortfolioChartView(
+                    history: DummyData.portfolioHistory(for: habits),
+                    currency: currency
+                )
+
+                LazyVGrid(columns: columns, alignment: .leading, spacing: 20) {
+                    ForEach(habits) { habit in
+                        HabitCardView(habit: habit, currency: currency)
                     }
                 }
             }
-        } detail: {
-            Text("Select an item")
+            .frame(maxWidth: 1000)
+            .padding(.horizontal, 40)
+            .padding(.vertical, 50)
+            .frame(maxWidth: .infinity)
         }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
-            }
-        }
+        .background(Theme.background)
+        .frame(minWidth: 460, minHeight: 500)
+        .preferredColorScheme(.dark)
     }
 }
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
 }
