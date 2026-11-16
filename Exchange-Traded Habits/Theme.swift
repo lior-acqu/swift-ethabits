@@ -9,7 +9,7 @@
 import SwiftUI
 
 enum Theme {
-    static let background = Color(hex: 0x1F1F1F)
+    static let background = Color(hex: 0x0F0F0F)
     static let surface = Color(hex: 0x2B2B2B)
     static let surfaceHover = Color(hex: 0x333333)
     static let border = Color(hex: 0x4B4B4B)
@@ -43,6 +43,6 @@ extension Color {
 extension Font {
     /// The app's monospaced font (SF Mono, the system counterpart to Roboto Mono).
     static func mono(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        .system(size: size, weight: weight, design: .monospaced)
+        .system(size: size, weight: weight)
     }
 }
