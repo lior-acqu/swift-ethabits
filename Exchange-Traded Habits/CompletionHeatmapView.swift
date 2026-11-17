@@ -21,6 +21,29 @@ struct CompletionHeatmapView: View {
     /// The available width, measured to decide how many weeks fit.
     @State private var width: CGFloat = 0
 
+    /// The square under the mouse pointer, and the size of its hover card.
+    @State private var hovered: HoveredCell?
+    @State private var cardSize: CGSize = .zero
+
+    private struct HoveredCell: Equatable {
+        let day: Date
+        let column: Int
+        let row: Int
+    }
+
+    /// The heatmap's colors: the theme colors, 5% more saturated and 5% darker.
+    private static let filled = Theme.positive.adjusted(saturation: 0.05, brightness: 0)
+    private static let empty = Theme.surface.adjusted(saturation: 0.05, brightness: 0)
+
+    /// The fill for a day where `ratio` of the habits were done (0...1).
+    /// Used by both the squares and the legend so they always match.
+    private static func color(forRatio ratio: Double) -> Color {
+        if ratio >= 1 { return filled }
+        if ratio <= 0 { return empty }
+        // Partly done: from a dim to a fairly bright blue.
+        return filled.opacity(0.05 + 0.9 * ratio)
+    }
+
     private var calendar: Calendar { .current }
     private var today: Date { calendar.startOfDay(for: .now) }
 
@@ -38,23 +61,28 @@ struct CompletionHeatmapView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 24) {
             Text("Activity")
-                .font(.mono(26, weight: .medium))
+                .sansFont(40, weight: .medium)
                 .foregroundStyle(Theme.textPrimary)
 
             VStack(alignment: .leading, spacing: 6) {
                 monthLabels
                 HStack(alignment: .top, spacing: spacing) {
                     weekdayLabels
-                    ForEach(weekStarts, id: \.self) { weekStart in
+                    ForEach(Array(weekStarts.enumerated()), id: \.element) { column, weekStart in
                         VStack(spacing: spacing) {
-                            ForEach(0..<7, id: \.self) { offset in
-                                cell(for: calendar.date(byAdding: .day, value: offset, to: weekStart)!)
+                            ForEach(0..<7, id: \.self) { row in
+                                cell(
+                                    for: calendar.date(byAdding: .day, value: row, to: weekStart)!,
+                                    column: column,
+                                    row: row
+                                )
                             }
                         }
                     }
                 }
+                .overlay(alignment: .topLeading) { hoverCard }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
@@ -66,7 +94,7 @@ struct CompletionHeatmapView: View {
     // MARK: - Cells
 
     @ViewBuilder
-    private func cell(for day: Date) -> some View {
+    private func cell(for day: Date, column: Int, row: Int) -> some View {
         if day > today {
             // The rest of this week: leave the space empty.
             Color.clear.frame(width: cellSize, height: cellSize)
@@ -75,7 +103,7 @@ struct CompletionHeatmapView: View {
             RoundedRectangle(cornerRadius: 3)
                 .fill(color(for: completion))
                 .frame(width: cellSize, height: cellSize)
-                .shadow(color: completion?.isPerfect == true ? Theme.positive.opacity(0.9) : .clear, radius: 4)
+                .shadow(color: completion?.isPerfect == true ? Self.filled.opacity(0.9) : .clear, radius: 4)
                 .overlay {
                     // Mark today with a thin outline.
                     if day == today {
@@ -83,26 +111,48 @@ struct CompletionHeatmapView: View {
                             .strokeBorder(.white.opacity(0.6), lineWidth: 1)
                     }
                 }
-                .help(tooltip(for: day, completion: completion))
+                .onHover { isInside in
+                    if isInside {
+                        hovered = HoveredCell(day: day, column: column, row: row)
+                    } else if hovered?.day == day {
+                        // Only clear if no other square took over in the meantime.
+                        hovered = nil
+                    }
+                }
         }
     }
 
     private func color(for completion: HabitStatistics.DayCompletion?) -> Color {
         guard let completion, completion.total > 0 else {
             // No habits tracked that day.
-            return Theme.surface.opacity(0.5)
+            return Self.empty.opacity(0.5)
         }
-        if completion.isPerfect { return Theme.positive }
-        if completion.done == 0 { return Theme.surface }
-        // Partly done: from a dim to a fairly bright blue.
-        return Theme.positive.opacity(0.18 + 0.5 * completion.ratio)
+        if completion.isPerfect { return Self.filled }
+        return Self.color(forRatio: completion.ratio)
     }
 
-    private func tooltip(for day: Date, completion: HabitStatistics.DayCompletion?) -> String {
-        let date = day.formatted(.dateTime.weekday(.wide).day().month(.wide).year())
-        guard let completion, completion.total > 0 else { return "\(date): no habits tracked" }
-        if completion.isPerfect { return "\(date): all \(completion.total) habits done" }
-        return "\(date): \(completion.done) of \(completion.total) habits done"
+    // MARK: - Hover card
+
+    /// The card above the hovered square, kept within the heatmap's width.
+    @ViewBuilder
+    private var hoverCard: some View {
+        if let hovered {
+            let step = cellSize + spacing
+            let cellCenterX = labelWidth + spacing + CGFloat(hovered.column) * step + cellSize / 2
+            let cellTop = CGFloat(hovered.row) * step
+            let maxX = max(width - cardSize.width, 0)
+            let x = min(max(cellCenterX - cardSize.width / 2, 0), maxX)
+
+            HoverCard(date: hovered.day, value: percentText(for: completionByDay[hovered.day]))
+                .onGeometryChange(for: CGSize.self) { $0.size } action: { cardSize = $0 }
+                .offset(x: x, y: cellTop - cardSize.height - 8)
+        }
+    }
+
+    /// The share of habits done that day.
+    private func percentText(for completion: HabitStatistics.DayCompletion?) -> String {
+        guard let completion, completion.total > 0 else { return "No habits" }
+        return (completion.ratio * 100).formatted(.number.precision(.fractionLength(0))) + "%"
     }
 
     // MARK: - Labels
@@ -152,13 +202,13 @@ struct CompletionHeatmapView: View {
                 .padding(.trailing, 4)
             ForEach([0.0, 0.25, 0.5, 0.75], id: \.self) { ratio in
                 RoundedRectangle(cornerRadius: 3)
-                    .fill(ratio == 0 ? Theme.surface : Theme.positive.opacity(0.18 + 0.5 * ratio))
+                    .fill(Self.color(forRatio: ratio))
                     .frame(width: cellSize, height: cellSize)
             }
             RoundedRectangle(cornerRadius: 3)
-                .fill(Theme.positive)
+                .fill(Self.color(forRatio: 1))
                 .frame(width: cellSize, height: cellSize)
-                .shadow(color: Theme.positive.opacity(0.9), radius: 4)
+                .shadow(color: Self.filled.opacity(0.9), radius: 4)
             Text("All done")
                 .padding(.leading, 4)
         }

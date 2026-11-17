@@ -35,11 +35,11 @@ struct PortfolioChartView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Total Habit Portfolio")
-                .font(.mono(26, weight: .medium))
+                .sansFont(40, weight: .medium)
                 .foregroundStyle(Theme.textPrimary)
 
             Text("\(currency) \(currentValue, specifier: "%.2f") (\(changePercent, specifier: "%.2f")%)")
-                .font(.mono(16))
+                .font(.mono(40))
                 .foregroundStyle(Theme.textSecondary)
 
             chart
@@ -48,31 +48,87 @@ struct PortfolioChartView: View {
         }
     }
 
+    /// The day under the mouse pointer, while hovering over the graph.
+    @State private var hoveredDate: Date?
+
+    /// The point closest to the hovered day.
+    private var hoveredPoint: PortfolioPoint? {
+        guard let hoveredDate else { return nil }
+        return history.min {
+            abs($0.date.timeIntervalSince(hoveredDate)) < abs($1.date.timeIntervalSince(hoveredDate))
+        }
+    }
+
     private var chart: some View {
-        Chart(history) { point in
-            // The translucent fill below the line.
-            AreaMark(
-                x: .value("Date", point.date),
-                yStart: .value("Base", yDomain.lowerBound),
-                yEnd: .value("Value", point.value)
-            )
-            .interpolationMethod(.catmullRom)
-            .foregroundStyle(color.opacity(0.13))
+        Chart {
+            ForEach(history) { point in
+                // The translucent fill below the line.
+                AreaMark(
+                    x: .value("Date", point.date),
+                    yStart: .value("Base", yDomain.lowerBound),
+                    yEnd: .value("Value", point.value)
+                )
+                .interpolationMethod(.catmullRom)
+                .foregroundStyle(color.opacity(0.13))
 
-            LineMark(
-                x: .value("Date", point.date),
-                y: .value("Value", point.value)
-            )
-            .interpolationMethod(.catmullRom)
-            .lineStyle(StrokeStyle(lineWidth: 2.5))
-            .foregroundStyle(color)
+                LineMark(
+                    x: .value("Date", point.date),
+                    y: .value("Value", point.value)
+                )
+                .interpolationMethod(.catmullRom)
+                .lineStyle(StrokeStyle(lineWidth: 2.5))
+                .foregroundStyle(color)
 
-            PointMark(
-                x: .value("Date", point.date),
-                y: .value("Value", point.value)
-            )
-            .symbolSize(22)
-            .foregroundStyle(color)
+                PointMark(
+                    x: .value("Date", point.date),
+                    y: .value("Value", point.value)
+                )
+                .symbolSize(22)
+                .foregroundStyle(color)
+            }
+
+            if let hoveredPoint {
+                // A thin vertical line and a bigger dot on the hovered day,
+                // with the card above the dot.
+                RuleMark(x: .value("Date", hoveredPoint.date))
+                    .foregroundStyle(Theme.textSecondary.opacity(0.35))
+                    .lineStyle(StrokeStyle(lineWidth: 1))
+
+                PointMark(
+                    x: .value("Date", hoveredPoint.date),
+                    y: .value("Value", hoveredPoint.value)
+                )
+                .symbolSize(90)
+                .foregroundStyle(color)
+                .annotation(
+                    position: .top,
+                    spacing: 12,
+                    overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))
+                ) {
+                    HoverCard(
+                        date: hoveredPoint.date,
+                        value: "\(currency) \(hoveredPoint.value.formatted(.number.precision(.fractionLength(2))))"
+                    )
+                }
+            }
+        }
+        // Track the mouse over the plot area and turn its position into a date.
+        .chartOverlay { proxy in
+            GeometryReader { geometry in
+                Rectangle()
+                    .fill(.clear)
+                    .contentShape(Rectangle())
+                    .onContinuousHover { phase in
+                        switch phase {
+                        case .active(let location):
+                            guard let plotFrame = proxy.plotFrame else { return }
+                            let x = location.x - geometry[plotFrame].origin.x
+                            hoveredDate = proxy.value(atX: x, as: Date.self)
+                        case .ended:
+                            hoveredDate = nil
+                        }
+                    }
+            }
         }
         .chartYScale(domain: yDomain)
         // Room on the right, so the last date label is not cut off.

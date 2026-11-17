@@ -47,7 +47,7 @@ struct AddHabitView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Add Habit")
-                .font(.mono(20, weight: .semibold))
+                .sansFont(20, weight: .semibold)
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
 
@@ -106,9 +106,11 @@ struct AddHabitView: View {
             // In a sheet, macOS places these at the bottom right.
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") { dismiss() }
+                    .fontDesign(.default)
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button("Add Habit", action: addHabit)
+                    .fontDesign(.default)
                     .disabled(!isValid)
             }
         }

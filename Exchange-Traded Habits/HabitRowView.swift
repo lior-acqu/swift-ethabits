@@ -44,8 +44,10 @@ struct HabitRowView: View {
             .controlSize(.small)
 
             Text(habit.details)
-                .font(.mono(12))
+                .sansFont(12)
                 .foregroundStyle(Theme.textSecondary)
+                // Sidebar lists limit text to one line by default; show all of it.
+                .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
 
             Divider()
@@ -89,7 +91,7 @@ struct HabitRowView: View {
         HStack(alignment: .top, spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(habit.name)
-                    .font(.mono(15, weight: .semibold))
+                    .sansFont(15, weight: .semibold)
                     .foregroundStyle(Theme.textPrimary)
                 Text(habit.shortName)
                     .font(.mono(12))
@@ -128,16 +130,19 @@ struct ChangeBadge: View {
 
 extension View {
     /// Liquid Glass buttons. A highlighted button (e.g. "Done" when the habit
-    /// is completed today) is filled with the tint color.
-    @ViewBuilder
+    /// is completed today) is filled with the tint color. Button labels use
+    /// the regular font, not the app-wide monospaced one.
     func habitButtonStyle(highlighted: Bool = false, tint: Color? = nil) -> some View {
-        if highlighted {
-            buttonStyle(.glassProminent)
-                .tint(tint)
-                .foregroundStyle(.black)
-        } else {
-            buttonStyle(.glass)
+        Group {
+            if highlighted {
+                buttonStyle(.glassProminent)
+                    .tint(tint)
+                    .foregroundStyle(.black)
+            } else {
+                buttonStyle(.glass)
+            }
         }
+        .fontDesign(.default)
     }
 }
 

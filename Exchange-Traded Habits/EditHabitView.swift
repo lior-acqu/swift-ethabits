@@ -48,7 +48,7 @@ struct EditHabitView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Edit Habit")
-                .font(.mono(20, weight: .semibold))
+                .sansFont(20, weight: .semibold)
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
 
@@ -90,9 +90,11 @@ struct EditHabitView: View {
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") { dismiss() }
+                    .fontDesign(.default)
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save Changes", action: save)
+                    .fontDesign(.default)
                     .disabled(!isValid)
             }
         }

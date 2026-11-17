@@ -39,14 +39,22 @@ struct ContentView: View {
                         .backgroundExtensionEffect()
                 }
                 .toolbar {
+                    // On macOS, .primaryAction sits at the leading edge. A
+                    // flexible spacer (like `flex: 1` in CSS) pushes the
+                    // button to the top-right corner instead.
+                    ToolbarSpacer(.flexible)
                     // Toolbar buttons get the Liquid Glass look automatically.
-                    ToolbarItem(placement: .primaryAction) {
+                    ToolbarItem {
                         Button("Add Habit", systemImage: "plus") { isAddingHabit = true }
                             .help("Add Habit")
                     }
                 }
         }
         .toolbar(removing: .title)
+        // Monospaced text everywhere by default, like setting `font-family`
+        // on <body>. Titles, habit names and descriptions opt out with .sansFont.
+        // Applied above .sheet so the Add/Edit sheets inherit it too.
+        .fontDesign(.monospaced)
         .sheet(isPresented: $isAddingHabit) {
             AddHabitView()
         }

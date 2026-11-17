@@ -20,7 +20,7 @@ struct StatisticsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Statistics")
-                .font(.mono(26, weight: .medium))
+                .sansFont(40, weight: .medium)
                 .foregroundStyle(Theme.textPrimary)
 
             LazyVGrid(
@@ -160,16 +160,16 @@ struct StatisticTileView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(tile.title)
-                .font(.mono(14))
+                .sansFont(16)
                 .foregroundStyle(Theme.textSecondary)
             Text(tile.value)
-                .font(.mono(26, weight: .medium))
+                .font(.mono(40, weight: .medium))
                 .monospacedDigit()
                 .foregroundStyle(tile.color ?? Theme.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             Text(tile.detail)
-                .font(.mono(13))
+                .sansFont(13)
                 .foregroundStyle(Theme.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
