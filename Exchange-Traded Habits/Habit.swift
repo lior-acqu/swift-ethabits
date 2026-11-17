@@ -60,12 +60,17 @@ final class HabitLog {
     var date: Date
     var value: Double
     var completed: Bool
+    /// True for the entries filled in with the starting value when a habit is
+    /// added (yesterday and earlier). They are not real tracking, so the
+    /// statistics skip them. The default lets existing stores upgrade.
+    var isStartingEntry: Bool = false
     var habit: Habit?
 
-    init(date: Date, value: Double, completed: Bool) {
+    init(date: Date, value: Double, completed: Bool, isStartingEntry: Bool = false) {
         self.date = Calendar.current.startOfDay(for: date)
         self.value = value
         self.completed = completed
+        self.isStartingEntry = isStartingEntry
     }
 }
 
@@ -101,12 +106,12 @@ extension Habit {
         // Today starts as "not done yet": -1% spread over the interval.
         habit.logs.append(HabitLog(date: today, value: initialValue * (1 - 0.01 / interval), completed: false))
         // Yesterday holds the starting value.
-        habit.logs.append(HabitLog(date: daysAgo(1), value: initialValue, completed: true))
+        habit.logs.append(HabitLog(date: daysAgo(1), value: initialValue, completed: true, isStartingEntry: true))
         // Before that, fill in the starting value for every earlier day
         // that the other habits already have an entry for.
         var daysBack = 2
         while existingDays.contains(daysAgo(daysBack)) {
-            habit.logs.append(HabitLog(date: daysAgo(daysBack), value: initialValue, completed: true))
+            habit.logs.append(HabitLog(date: daysAgo(daysBack), value: initialValue, completed: true, isStartingEntry: true))
             daysBack += 1
         }
 

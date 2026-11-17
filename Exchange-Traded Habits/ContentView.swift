@@ -72,11 +72,18 @@ struct ContentView: View {
             }
         } else {
             ScrollView {
-                PortfolioChartView(history: habits.portfolioHistory(), currency: currency)
-                    .padding(.horizontal, 40)
-                    .padding(.vertical, 30)
-                    .frame(maxWidth: 1100)
-                    .frame(maxWidth: .infinity)
+                // Computed once per update and shared by both sections below.
+                let statistics = HabitStatistics(habits: habits)
+
+                VStack(alignment: .leading, spacing: 50) {
+                    PortfolioChartView(history: habits.portfolioHistory(), currency: currency)
+                    StatisticsView(statistics: statistics, currency: currency)
+                    CompletionHeatmapView(completionByDay: statistics.completionByDay)
+                }
+                .padding(.horizontal, 40)
+                .padding(.vertical, 30)
+                .frame(maxWidth: 1100)
+                .frame(maxWidth: .infinity)
             }
         }
     }
