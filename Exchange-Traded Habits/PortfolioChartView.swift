@@ -7,6 +7,7 @@
 //
 
 import Charts
+import SwiftData
 import SwiftUI
 
 struct PortfolioChartView: View {
@@ -96,10 +97,12 @@ struct PortfolioChartView: View {
 }
 
 #Preview {
+    let container = DummyData.previewContainer
     PortfolioChartView(
-        history: DummyData.portfolioHistory(for: DummyData.habits),
-        currency: DummyData.currency
+        history: DummyData.previewHabits(in: container).portfolioHistory(),
+        currency: AppConfig.currency
     )
     .padding(40)
     .background(Theme.background)
+    .modelContainer(container)
 }

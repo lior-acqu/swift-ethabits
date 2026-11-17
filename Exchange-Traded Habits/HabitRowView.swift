@@ -6,32 +6,39 @@
 //  buttons and description.
 //
 
+import SwiftData
 import SwiftUI
 
 struct HabitRowView: View {
     let habit: Habit
     let currency: String
 
+    @Environment(\.modelContext) private var modelContext
+    @State private var isEditing = false
+    @State private var isConfirmingDelete = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             header
 
-            // The buttons do nothing yet; their actions come in a later step.
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
-                    Button("Done") {}
+                    Button("Done") { setCompleted(true, daysAgo: 0) }
                         .habitButtonStyle(highlighted: habit.completedToday, tint: Theme.positive)
-                    Button("Missed") {}
+                    Button("Missed") { setCompleted(false, daysAgo: 0) }
                         .habitButtonStyle(highlighted: !habit.completedToday, tint: Theme.negative)
-                    Button("Done Yesterday") {}
+                    Button("Done Yesterday") { setCompleted(true, daysAgo: 1) }
                         .habitButtonStyle()
+                        .disabled(!habit.canCompleteYesterday)
                 }
                 HStack(spacing: 6) {
-                    Button("Edit Habit", systemImage: "pencil") {}
+                    Button("Edit Habit", systemImage: "pencil") { isEditing = true }
                         .habitButtonStyle()
-                    Button("Delete Habit", systemImage: "trash", role: .destructive) {}
-                        .habitButtonStyle()
-                        .foregroundStyle(Theme.negative)
+                    Button("Delete Habit", systemImage: "trash", role: .destructive) {
+                        isConfirmingDelete = true
+                    }
+                    .habitButtonStyle()
+                    .foregroundStyle(Theme.negative)
                 }
             }
             .controlSize(.small)
@@ -45,6 +52,35 @@ struct HabitRowView: View {
                 .padding(.top, 4)
         }
         .padding(.top, 8)
+        .sheet(isPresented: $isEditing) {
+            EditHabitView(habit: habit)
+        }
+        .confirmationDialog(
+            "Delete “\(habit.name)”?",
+            isPresented: $isConfirmingDelete
+        ) {
+            Button("Delete Habit", role: .destructive, action: deleteHabit)
+        } message: {
+            Text("The habit and its whole history will be removed. This can't be undone.")
+        }
+    }
+
+    /// Done / Missed (today) and Done Yesterday.
+    private func setCompleted(_ completed: Bool, daysAgo: Int) {
+        // Make sure today has an entry, e.g. if the app stayed open past midnight.
+        habit.fillMissingDays()
+        let date = Calendar.current.date(byAdding: .day, value: -daysAgo, to: .now)!
+        withAnimation {
+            _ = habit.setCompleted(completed, on: date)
+        }
+        try? modelContext.save()
+    }
+
+    private func deleteHabit() {
+        withAnimation {
+            modelContext.delete(habit)
+        }
+        try? modelContext.save()
     }
 
     /// Name and short name on the left, value and change on the right,
@@ -106,9 +142,11 @@ extension View {
 }
 
 #Preview {
-    List(DummyData.habits) { habit in
-        HabitRowView(habit: habit, currency: DummyData.currency)
+    let container = DummyData.previewContainer
+    List(DummyData.previewHabits(in: container)) { habit in
+        HabitRowView(habit: habit, currency: AppConfig.currency)
     }
     .listStyle(.sidebar)
     .frame(width: 340, height: 600)
+    .modelContainer(container)
 }

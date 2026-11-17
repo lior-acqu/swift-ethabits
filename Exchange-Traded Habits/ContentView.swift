@@ -6,12 +6,19 @@
 //  the portfolio graph on the right.
 //
 
+import Combine
+import SwiftData
 import SwiftUI
 
 struct ContentView: View {
-    // Dummy data for now; later this comes from local storage.
-    private let habits = DummyData.habits
-    private let currency = DummyData.currency
+    /// All stored habits, oldest first. Updates automatically when one is added.
+    @Query(sort: \Habit.createdAt) private var habits: [Habit]
+    @State private var isAddingHabit = false
+
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
+
+    private let currency = AppConfig.currency
 
     var body: some View {
         // NavigationSplitView is macOS's sidebar + content layout. On macOS 26
@@ -23,30 +30,59 @@ struct ContentView: View {
             .listStyle(.sidebar)
             .navigationSplitViewColumnWidth(min: 300, ideal: 340, max: 460)
         } detail: {
-            ScrollView {
-                PortfolioChartView(
-                    history: DummyData.portfolioHistory(for: habits),
-                    currency: currency
-                )
-                .padding(.horizontal, 40)
-                .padding(.vertical, 30)
-                .frame(maxWidth: 1100)
-                .frame(maxWidth: .infinity)
-            }
-            .background {
-                // Fill the whole detail area, including the space under the
-                // toolbar and behind the glass sidebar.
-                Theme.background
-                    .ignoresSafeArea()
-                    .backgroundExtensionEffect()
-            }
+            detail
+                .background {
+                    // Fill the whole detail area, including the space under the
+                    // toolbar and behind the glass sidebar.
+                    Theme.background
+                        .ignoresSafeArea()
+                        .backgroundExtensionEffect()
+                }
+                .toolbar {
+                    // Toolbar buttons get the Liquid Glass look automatically.
+                    ToolbarItem(placement: .primaryAction) {
+                        Button("Add Habit", systemImage: "plus") { isAddingHabit = true }
+                            .help("Add Habit")
+                    }
+                }
         }
         .toolbar(removing: .title)
+        .sheet(isPresented: $isAddingHabit) {
+            AddHabitView()
+        }
+        // Keep the daily entries up to date: when the app comes back to the
+        // front, and at midnight while it is open.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { HabitTracker.fillMissingDays(in: modelContext) }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged).receive(on: RunLoop.main)) { _ in
+            HabitTracker.fillMissingDays(in: modelContext)
+        }
         .frame(minWidth: 820, minHeight: 520)
         .preferredColorScheme(.dark)
+    }
+
+    @ViewBuilder
+    private var detail: some View {
+        if habits.isEmpty {
+            ContentUnavailableView {
+                Label("No Habits Yet", systemImage: "chart.line.uptrend.xyaxis")
+            } description: {
+                Text("Press + to add your first habit.")
+            }
+        } else {
+            ScrollView {
+                PortfolioChartView(history: habits.portfolioHistory(), currency: currency)
+                    .padding(.horizontal, 40)
+                    .padding(.vertical, 30)
+                    .frame(maxWidth: 1100)
+                    .frame(maxWidth: .infinity)
+            }
+        }
     }
 }
 
 #Preview {
     ContentView()
+        .modelContainer(DummyData.previewContainer)
 }

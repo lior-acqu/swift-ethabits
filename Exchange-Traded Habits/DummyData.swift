@@ -2,27 +2,42 @@
 //  DummyData.swift
 //  Exchange-Traded Habits
 //
-//  Placeholder data so the main page has something to show.
-//  This whole file goes away once real, locally stored data exists.
+//  Placeholder habits. They are put into the local store once, on the very
+//  first launch, and are also used by the Xcode previews.
 //
 
 import Foundation
+import SwiftData
 
 enum DummyData {
-    static let currency = "CHF"
-    static let habits: [Habit] = makeHabits(days: 30)
+    private static let seededKey = "didSeedDummyData"
 
-    /// Sums up all habit values per day (the old `SUM(hl.value) ... GROUP BY hl.date` query).
-    static func portfolioHistory(for habits: [Habit]) -> [PortfolioPoint] {
-        var totals: [Date: Double] = [:]
-        for habit in habits {
-            for log in habit.logs {
-                totals[log.date, default: 0] += log.value
-            }
+    /// Inserts the dummy habits on the first launch only. Once they are
+    /// deleted they stay deleted, because the flag is remembered.
+    static func seedIfNeeded(into context: ModelContext) {
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: seededKey) else { return }
+        if (try? context.fetchCount(FetchDescriptor<Habit>())) == 0 {
+            insert(into: context)
+            try? context.save()
         }
-        return totals
-            .map { PortfolioPoint(date: $0.key, value: $0.value) }
-            .sorted { $0.date < $1.date }
+        defaults.set(true, forKey: seededKey)
+    }
+
+    /// A throwaway in-memory store with the dummy habits, for previews.
+    static var previewContainer: ModelContainer {
+        let container = try! ModelContainer(
+            for: Habit.self, HabitLog.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        insert(into: container.mainContext)
+        return container
+    }
+
+    /// The preview store's habits, in the order they were added.
+    static func previewHabits(in container: ModelContainer) -> [Habit] {
+        let descriptor = FetchDescriptor<Habit>(sortBy: [SortDescriptor(\.createdAt)])
+        return (try? container.mainContext.fetch(descriptor)) ?? []
     }
 
     // MARK: - Generation
@@ -53,35 +68,34 @@ enum DummyData {
              importance: 8, difficulty: 6, interval: 7, completionRate: 0.2),
     ]
 
-    private static func makeHabits(days: Int) -> [Habit] {
-        // A fixed seed, so the dummy data looks the same on every launch.
+    private static func insert(into context: ModelContext, days: Int = 30) {
+        // A fixed seed, so the dummy data looks the same every time.
         var random = SeededGenerator(seed: 42)
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: .now)
 
-        return specs.map { spec in
+        for (index, spec) in specs.enumerated() {
             let initialValue = Habit.makeInitialValue(
                 importance: spec.importance, difficulty: spec.difficulty, interval: spec.interval)
+            let habit = Habit(
+                name: spec.name,
+                shortName: Habit.makeShortName(from: spec.name),
+                details: Habit.makeDetails(interval: spec.interval, time: spec.time, identity: spec.identity),
+                interval: spec.interval,
+                initialValue: initialValue,
+                // One second apart, so they keep this order.
+                createdAt: .now.addingTimeInterval(Double(index - specs.count))
+            )
+            context.insert(habit)
 
             var value = initialValue
-            var logs: [HabitLog] = []
             for daysAgo in (0..<days).reversed() {
                 let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
                 let completed = Double.random(in: 0..<1, using: &random) < spec.completionRate
                 // +1% when done, -1% (spread over the interval) when missed.
                 value *= completed ? 1.01 : 1 - 0.01 / spec.interval
-                logs.append(HabitLog(date: date, value: value, completed: completed))
+                habit.logs.append(HabitLog(date: date, value: value, completed: completed))
             }
-
-            let interval = spec.interval.formatted(.number.precision(.fractionLength(0...2)))
-            return Habit(
-                name: spec.name,
-                shortName: Habit.makeShortName(from: spec.name),
-                details: "Every \(interval) day/s, I'll complete this habit when \(spec.time) to become \(spec.identity).",
-                interval: spec.interval,
-                initialValue: initialValue,
-                logs: logs
-            )
         }
     }
 }
