@@ -41,6 +41,10 @@ final class Habit {
     var currentValue: Double { sortedLogs.last?.value ?? initialValue }
 
     /// Change since the habit was created, in percent.
+    /// The short name with the interval, e.g. "MRNN (2d)", so the interval
+    /// stays visible even if the description no longer mentions it.
+    var tickerLabel: String { "\(shortName) (\(Habit.formatInterval(interval))d)" }
+
     var changePercent: Double { currentValue / initialValue * 100 - 100 }
 
     var completedToday: Bool { log(on: .now)?.completed ?? false }
@@ -134,8 +138,13 @@ extension Habit {
         Double(importance * difficulty) * (Foundation.log(interval) + 1)
     }
 
+    /// The interval as text without needless decimals, e.g. "7" or "1.5".
+    static func formatInterval(_ interval: Double) -> String {
+        interval.formatted(.number.precision(.fractionLength(0...2)))
+    }
+
     static func makeDetails(interval: Double, time: String, identity: String) -> String {
-        let days = interval.formatted(.number.precision(.fractionLength(0...2)))
+        let days = formatInterval(interval)
         return "Every \(days) day/s, I'll complete this habit when \(time) to become \(identity)."
     }
 }

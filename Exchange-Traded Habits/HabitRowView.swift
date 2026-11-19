@@ -93,7 +93,7 @@ struct HabitRowView: View {
                 Text(habit.name)
                     .sansFont(15, weight: .semibold)
                     .foregroundStyle(Theme.textPrimary)
-                Text(habit.shortName)
+                Text(habit.tickerLabel)
                     .font(.mono(12))
                     .foregroundStyle(Theme.textSecondary)
             }

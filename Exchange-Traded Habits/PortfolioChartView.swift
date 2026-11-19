@@ -33,13 +33,14 @@ struct PortfolioChartView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Total Habit Portfolio")
-                .sansFont(40, weight: .medium)
+                .sansFont(64, weight: .medium)
                 .foregroundStyle(Theme.textPrimary)
+                .padding(.top, 40)
 
             Text("\(currency) \(currentValue, specifier: "%.2f") (\(changePercent, specifier: "%.2f")%)")
-                .font(.mono(40))
+                .font(.mono(32))
                 .foregroundStyle(Theme.textSecondary)
 
             chart

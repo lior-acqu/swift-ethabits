@@ -84,7 +84,12 @@ struct CompletionHeatmapView: View {
                 }
                 .overlay(alignment: .topLeading) { hoverCard }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            // minWidth: 0 lets this frame take whatever width it is offered,
+            // even if the weeks currently shown are wider. Without it, the
+            // heatmap could only grow: the shown weeks kept the frame wide,
+            // so the measured width (and the week count) never went down
+            // and the whole window content got pushed out of view.
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
 
             legend

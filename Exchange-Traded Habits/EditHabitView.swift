@@ -20,6 +20,7 @@ struct EditHabitView: View {
     @State private var name: String
     @State private var shortName: String
     @State private var initialValue: Double
+    @State private var interval: Double
     @State private var details: String
 
     /// `suggestion` is an optional Apple Intelligence suggestion that
@@ -30,6 +31,7 @@ struct EditHabitView: View {
         _name = State(initialValue: suggestion?.name ?? habit.name)
         _shortName = State(initialValue: habit.shortName)
         _initialValue = State(initialValue: habit.initialValue)
+        _interval = State(initialValue: habit.interval)
         _details = State(initialValue: suggestion.map {
             Habit.makeDetails(interval: habit.interval, time: $0.time, identity: $0.identity)
         } ?? habit.details)
@@ -42,6 +44,7 @@ struct EditHabitView: View {
     private var isValid: Bool {
         !trimmed(name).isEmpty && !trimmed(shortName).isEmpty && !trimmed(details).isEmpty
             && initialValue > 0 && initialValue <= 1000
+            && interval > 0 && interval <= 365
     }
 
     /// What the current value would become with the new starting value.
@@ -83,6 +86,35 @@ struct EditHabitView: View {
                         .foregroundStyle(.secondary)
                 }
 
+                Section {
+                    LabeledContent {
+                        HStack(spacing: 6) {
+                            TextField("Interval", value: $interval, format: .number)
+                                .labelsHidden()
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 56)
+                            Text("day/s")
+                                .foregroundStyle(.secondary)
+                            Stepper("Interval", value: $interval, in: 1...365, step: 1)
+                                .labelsHidden()
+                        }
+                    } label: {
+                        Text("Repeat Every")
+                        Text("Daily = 1")
+                    }
+                } footer: {
+                    Text("Past values stay the same. From now on, a missed day costs 1% ÷ \(Habit.formatInterval(max(interval, 0)))\(interval == habit.interval ? "" : " instead of 1% ÷ \(Habit.formatInterval(habit.interval))").")
+                        .font(.mono(11))
+                        .foregroundStyle(.secondary)
+                }
+                // Keep "Every X day/s, …" at the start of the description in
+                // sync, if the description still starts that way.
+                .onChange(of: interval) { oldValue, newValue in
+                    let oldPrefix = "Every \(Habit.formatInterval(oldValue)) day/s"
+                    guard newValue > 0, details.hasPrefix(oldPrefix) else { return }
+                    details = "Every \(Habit.formatInterval(newValue)) day/s" + details.dropFirst(oldPrefix.count)
+                }
+
                 Section("Description") {
                     TextField("Description", text: $details, prompt: Text("Description"), axis: .vertical)
                         .labelsHidden()
@@ -111,6 +143,7 @@ struct EditHabitView: View {
         habit.shortName = trimmed(shortName)
         habit.details = trimmed(details)
         habit.setInitialValue(initialValue)
+        habit.setInterval(interval)
         try? modelContext.save()
         dismiss()
     }

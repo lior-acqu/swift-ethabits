@@ -60,6 +60,19 @@ extension Habit {
         return true
     }
 
+    /// Changes how often the habit repeats. Past values stay as they are;
+    /// from now on, a missed day costs 1% ÷ the new interval. Today's entry,
+    /// if not done yet, was computed with the old interval, so it is
+    /// recomputed with the new one.
+    func setInterval(_ newInterval: Double) {
+        guard newInterval > 0, newInterval != interval else { return }
+        let oldMissedFactor = missedFactor
+        interval = newInterval
+        if let today = log(on: .now), !today.completed {
+            today.value *= missedFactor / oldMissedFactor
+        }
+    }
+
     /// Changes the starting value. All entries scale with it, so the change
     /// in percent stays the same (as in the old edit route).
     func setInitialValue(_ newValue: Double) {

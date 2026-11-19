@@ -9,7 +9,7 @@
 import SwiftUI
 
 enum Theme {
-    static let background = Color(hex: 0x121316)
+    static let background = Color(hex: 0x191919)
     static let surface = Color(hex: 0x2B2B2B)
     static let surfaceHover = Color(hex: 0x333333)
     static let border = Color(hex: 0x4B4B4B)

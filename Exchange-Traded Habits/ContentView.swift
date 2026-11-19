@@ -16,6 +16,20 @@ struct ContentView: View {
     @State private var isAddingHabit = false
     @State private var isShowingInsights = false
 
+    /// The width of the main area, measured to decide whether the Insights
+    /// panel fits next to the content or has to float over it.
+    @State private var detailWidth: CGFloat = 0
+
+    private let insightsWidth: CGFloat = 360
+    /// The narrowest the main content may get before the panel overlays it.
+    private let minContentWidth: CGFloat = 480
+
+    /// True when the panel can sit next to the content; false when the
+    /// window is too narrow and the panel floats over the content instead.
+    private var insightsFitBeside: Bool {
+        detailWidth - insightsWidth >= minContentWidth
+    }
+
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
 
@@ -39,10 +53,20 @@ struct ContentView: View {
                         .ignoresSafeArea()
                         .backgroundExtensionEffect()
                 }
-                // The Apple Intelligence panel, sliding in from the right.
-                .inspector(isPresented: $isShowingInsights) {
-                    InsightsView(habits: habits)
-                        .inspectorColumnWidth(min: 300, ideal: 360, max: 480)
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { detailWidth = $0 }
+                // The Apple Intelligence panel: a floating glass panel on the
+                // right, like the sidebar on the left. Unlike the system
+                // inspector, it never needs extra window width, so it can't
+                // push the layout out of a small window.
+                .overlay(alignment: .trailing) {
+                    if isShowingInsights {
+                        InsightsView(habits: habits)
+                            .frame(width: insightsWidth)
+                            .frame(maxHeight: .infinity)
+                            .glassEffect(.regular, in: .rect(cornerRadius: 22))
+                            .padding(8)
+                            .transition(.move(edge: .trailing).combined(with: .opacity))
+                    }
                 }
                 .toolbar {
                     // On macOS, .primaryAction sits at the leading edge. A
@@ -55,7 +79,9 @@ struct ContentView: View {
                             .help("Add Habit")
                     }
                     ToolbarItem {
-                        Button("Insights", systemImage: "sparkles") { isShowingInsights.toggle() }
+                        Button("Insights", systemImage: "sparkles") {
+                            withAnimation(.smooth(duration: 0.3)) { isShowingInsights.toggle() }
+                        }
                             .help("Apple Intelligence Insights")
                     }
                 }
@@ -102,6 +128,9 @@ struct ContentView: View {
                 .padding(.vertical, 30)
                 .frame(maxWidth: 1100)
                 .frame(maxWidth: .infinity)
+                // Make room for the Insights panel when it fits beside the
+                // content (like a CSS margin); otherwise it floats on top.
+                .padding(.trailing, isShowingInsights && insightsFitBeside ? insightsWidth + 16 : 0)
             }
         }
     }
