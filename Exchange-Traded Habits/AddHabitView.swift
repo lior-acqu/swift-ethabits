@@ -22,6 +22,18 @@ struct AddHabitView: View {
     @State private var interval = 1.0
     @State private var errorMessage: String?
 
+    /// Opens the form empty, or filled in with an Apple Intelligence
+    /// suggestion. Nothing is saved until "Add Habit" is pressed.
+    init(prefill suggestion: HabitSuggestion? = nil) {
+        guard let suggestion else { return }
+        _name = State(initialValue: suggestion.name)
+        _time = State(initialValue: suggestion.time)
+        _identity = State(initialValue: suggestion.identity)
+        _importance = State(initialValue: suggestion.importance)
+        _difficulty = State(initialValue: suggestion.difficulty)
+        _interval = State(initialValue: Double(suggestion.interval))
+    }
+
     private func trimmed(_ text: String) -> String {
         text.trimmingCharacters(in: .whitespacesAndNewlines)
     }

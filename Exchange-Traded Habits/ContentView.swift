@@ -14,6 +14,7 @@ struct ContentView: View {
     /// All stored habits, oldest first. Updates automatically when one is added.
     @Query(sort: \Habit.createdAt) private var habits: [Habit]
     @State private var isAddingHabit = false
+    @State private var isShowingInsights = false
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
@@ -38,15 +39,24 @@ struct ContentView: View {
                         .ignoresSafeArea()
                         .backgroundExtensionEffect()
                 }
+                // The Apple Intelligence panel, sliding in from the right.
+                .inspector(isPresented: $isShowingInsights) {
+                    InsightsView(habits: habits)
+                        .inspectorColumnWidth(min: 300, ideal: 360, max: 480)
+                }
                 .toolbar {
                     // On macOS, .primaryAction sits at the leading edge. A
                     // flexible spacer (like `flex: 1` in CSS) pushes the
-                    // button to the top-right corner instead.
+                    // buttons to the top-right corner instead.
                     ToolbarSpacer(.flexible)
                     // Toolbar buttons get the Liquid Glass look automatically.
                     ToolbarItem {
                         Button("Add Habit", systemImage: "plus") { isAddingHabit = true }
                             .help("Add Habit")
+                    }
+                    ToolbarItem {
+                        Button("Insights", systemImage: "sparkles") { isShowingInsights.toggle() }
+                            .help("Apple Intelligence Insights")
                     }
                 }
         }
