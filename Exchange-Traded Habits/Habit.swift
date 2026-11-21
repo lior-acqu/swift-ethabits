@@ -173,8 +173,3 @@ extension Sequence where Element == Habit {
             .sorted { $0.date < $1.date }
     }
 }
-
-enum AppConfig {
-    /// Was a per-user setting in the web app; hardcoded for now.
-    static let currency = "CHF"
-}

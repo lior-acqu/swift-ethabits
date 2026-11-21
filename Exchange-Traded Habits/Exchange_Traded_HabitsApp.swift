@@ -25,6 +25,9 @@ struct Exchange_Traded_HabitsApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                // Schedule the daily reminders at 6:00, 12:00 and 18:00 (or
+                // remove them, if turned off in Settings), like a useEffect on mount.
+                .task { await HabitReminders.refresh() }
         }
         .defaultSize(width: 1100, height: 850)
         .modelContainer(modelContainer)
