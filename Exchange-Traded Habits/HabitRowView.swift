@@ -21,27 +21,24 @@ struct HabitRowView: View {
         VStack(alignment: .leading, spacing: 10) {
             header
 
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
                     Button("Done") { setCompleted(true, daysAgo: 0) }
-                        .habitButtonStyle(highlighted: habit.completedToday, tint: Theme.positive)
+                        .buttonStyle(PillButtonStyle(tint: Theme.positive, isSelected: habit.completedToday))
                     Button("Missed") { setCompleted(false, daysAgo: 0) }
-                        .habitButtonStyle(highlighted: !habit.completedToday, tint: Theme.negative)
+                        .buttonStyle(PillButtonStyle(tint: Theme.negative, isSelected: !habit.completedToday))
                     Button("Done Yesterday") { setCompleted(true, daysAgo: 1) }
-                        .habitButtonStyle()
+                        .buttonStyle(PillButtonStyle(tint: Theme.muted))
                         .disabled(!habit.canCompleteYesterday)
                 }
-                HStack(spacing: 6) {
-                    Button("Edit Habit", systemImage: "pencil") { isEditing = true }
-                        .habitButtonStyle()
-                    Button("Delete Habit", systemImage: "trash", role: .destructive) {
-                        isConfirmingDelete = true
-                    }
-                    .habitButtonStyle()
-                    .foregroundStyle(Theme.negative)
+                HStack(spacing: 8) {
+                    Button("Edit Habit") { isEditing = true }
+                        .buttonStyle(PillButtonStyle(tint: Theme.muted))
+                    Button("Delete Habit", role: .destructive) { isConfirmingDelete = true }
+                        .buttonStyle(PillButtonStyle(tint: Theme.danger))
                 }
             }
-            .controlSize(.small)
+            .padding(.top, 2)
 
             Text(habit.details)
                 .sansFont(12)
@@ -112,19 +109,19 @@ struct HabitRowView: View {
     }
 }
 
-/// The colored box showing the change in percent, like in Stocks.
+/// The change in percent, as a pill in the same colors as the Done
+/// (gain) and Missed (loss) buttons.
 struct ChangeBadge: View {
     let changePercent: Double
 
     var body: some View {
         Text("\(changePercent >= 0 ? "+" : "")\(changePercent, specifier: "%.2f")%")
-            .font(.mono(12, weight: .semibold))
+            .font(.mono(12, weight: .medium))
             .monospacedDigit()
-            .foregroundStyle(.black)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 3)
             .frame(minWidth: 64, alignment: .trailing)
-            .background(Theme.trendColor(forChange: changePercent), in: RoundedRectangle(cornerRadius: 5))
+            .pillBackground(tint: Theme.trendColor(forChange: changePercent))
     }
 }
 

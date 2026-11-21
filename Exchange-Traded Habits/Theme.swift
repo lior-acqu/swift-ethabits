@@ -20,6 +20,12 @@ enum Theme {
     static let positive = Color(hex: 0x78C2FF)
     static let negative = Color(hex: 0xFF788E)
     static let neutral = Color(hex: 0xDFDFDF)
+    /// Neutral pill buttons (Edit Habit, Done Yesterday). Darker than
+    /// `neutral`, so their fill stays a dark grey like the other pills.
+    static let muted = Color(hex: 0x9A9A9A)
+    /// Destructive actions (Delete Habit): a deeper crimson than `negative`,
+    /// so deleting doesn't look like marking a habit as missed.
+    static let danger = Color(hex: 0xE0344F)
 
     /// Blue for gains, red for losses, grey for (almost) no change.
     static func trendColor(forChange change: Double) -> Color {
