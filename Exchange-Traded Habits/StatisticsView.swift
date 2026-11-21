@@ -18,7 +18,7 @@ struct StatisticsView: View {
     private var columnCount: Int { width < 560 ? 1 : 2 }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 30) {
             Text("Statistics")
                 .sansFont(40, weight: .medium)
                 .foregroundStyle(Theme.textPrimary)
@@ -47,26 +47,22 @@ struct StatisticsView: View {
             StatisticTile(
                 title: "Best Day (%)",
                 value: s.bestPercentDay.map { signedPercent($0.percent) } ?? "–",
-                detail: s.bestPercentDay.map { "on \(dayText($0.date))" } ?? notEnough,
-                color: s.bestPercentDay.map { Theme.trendColor(forChange: $0.percent) }
+                detail: s.bestPercentDay.map { "on \(dayText($0.date))" } ?? notEnough
             ),
             StatisticTile(
                 title: "Best Day (Gain)",
                 value: s.bestGainDay.map { signedMoney($0.gain) } ?? "–",
-                detail: s.bestGainDay.map { "on \(dayText($0.date))" } ?? notEnough,
-                color: s.bestGainDay.map { Theme.trendColor(forChange: $0.gain) }
+                detail: s.bestGainDay.map { "on \(dayText($0.date))" } ?? notEnough
             ),
             StatisticTile(
                 title: "Worst Day (%)",
                 value: s.worstPercentDay.map { signedPercent($0.percent) } ?? "–",
-                detail: s.worstPercentDay.map { "on \(dayText($0.date))" } ?? notEnough,
-                color: s.worstPercentDay.map { Theme.trendColor(forChange: $0.percent) }
+                detail: s.worstPercentDay.map { "on \(dayText($0.date))" } ?? notEnough
             ),
             StatisticTile(
                 title: "Average Daily Growth",
                 value: s.averageDailyGrowth.map { signedPercent($0, digits: 3) } ?? "–",
-                detail: "per day, compounded",
-                color: s.averageDailyGrowth.map { Theme.trendColor(forChange: $0) }
+                detail: "per day, compounded"
             ),
             StatisticTile(
                 title: "Longest Streak",
@@ -148,7 +144,6 @@ struct StatisticTile: Identifiable {
     let title: String
     let value: String
     let detail: String
-    var color: Color? = nil
 
     var id: String { title }
 }
@@ -163,9 +158,9 @@ struct StatisticTileView: View {
                 .sansFont(16)
                 .foregroundStyle(Theme.textSecondary)
             Text(tile.value)
-                .font(.mono(40, weight: .medium))
+                .font(.mono(24, weight: .medium))
                 .monospacedDigit()
-                .foregroundStyle(tile.color ?? Theme.textPrimary)
+                .foregroundStyle(Theme.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             Text(tile.detail)
