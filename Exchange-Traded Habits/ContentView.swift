@@ -47,11 +47,15 @@ struct ContentView: View {
     private var currency: String { AppSettings.currency(from: currencySetting) }
 
     var body: some View {
+        // Read every row's values right here in the body, so any change to
+        // a habit re-renders this view and hands the rows fresh values.
+        let rows = habits.map(HabitRowModel.init)
+
         // NavigationSplitView is macOS's sidebar + content layout. On macOS 26
         // the sidebar automatically becomes a floating Liquid Glass panel.
         NavigationSplitView {
-            List(habits) { habit in
-                HabitRowView(habit: habit, currency: currency)
+            List(rows) { row in
+                HabitRowView(row: row, currency: currency)
             }
             .listStyle(.sidebar)
             .navigationSplitViewColumnWidth(min: 300, ideal: 340, max: 460)

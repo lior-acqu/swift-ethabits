@@ -9,9 +9,45 @@
 import SwiftData
 import SwiftUI
 
-struct HabitRowView: View {
+/// What a sidebar row shows, read from the habit as plain values.
+///
+/// ContentView builds these in its body, so they are re-read on every
+/// change and passed down like props in React. A row that only observed
+/// its Habit object by itself sometimes missed the first change after
+/// launch (the chart updated, the row didn't).
+struct HabitRowModel: Identifiable {
     let habit: Habit
+    let name: String
+    let tickerLabel: String
+    let details: String
+    let currentValue: Double
+    let changePercent: Double
+    let completedToday: Bool
+    let canCompleteYesterday: Bool
+
+    /// The habit object itself. Its persistentModelID would change on its
+    /// first save, which would make the list treat it as a new row.
+    var id: ObjectIdentifier { ObjectIdentifier(habit) }
+
+    init(_ habit: Habit) {
+        self.habit = habit
+        name = habit.name
+        tickerLabel = habit.tickerLabel
+        details = habit.details
+        currentValue = habit.currentValue
+        changePercent = habit.changePercent
+        completedToday = habit.completedToday
+        canCompleteYesterday = habit.canCompleteYesterday
+    }
+}
+
+struct HabitRowView: View {
+    let row: HabitRowModel
     let currency: String
+
+    /// The habit to change when a button is pressed. Everything shown
+    /// comes from `row` instead.
+    private var habit: Habit { row.habit }
 
     @Environment(\.modelContext) private var modelContext
     @State private var isEditing = false
@@ -23,24 +59,23 @@ struct HabitRowView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
-                    Button("Done") { setCompleted(true, daysAgo: 0) }
-                        .buttonStyle(PillButtonStyle(tint: Theme.positive, isSelected: habit.completedToday))
-                    Button("Missed") { setCompleted(false, daysAgo: 0) }
-                        .buttonStyle(PillButtonStyle(tint: Theme.negative, isSelected: !habit.completedToday))
-                    Button("Done Yesterday") { setCompleted(true, daysAgo: 1) }
-                        .buttonStyle(PillButtonStyle(tint: Theme.muted))
-                        .disabled(!habit.canCompleteYesterday)
+                    PillButton("Done", tint: Theme.positive, isSelected: row.completedToday) {
+                        setCompleted(true, daysAgo: 0)
+                    }
+                    PillButton("Missed", tint: Theme.negative, isSelected: !row.completedToday) {
+                        setCompleted(false, daysAgo: 0)
+                    }
+                    PillButton("Done Yesterday", tint: Theme.muted) { setCompleted(true, daysAgo: 1) }
+                        .disabled(!row.canCompleteYesterday)
                 }
                 HStack(spacing: 8) {
-                    Button("Edit Habit") { isEditing = true }
-                        .buttonStyle(PillButtonStyle(tint: Theme.muted))
-                    Button("Delete Habit", role: .destructive) { isConfirmingDelete = true }
-                        .buttonStyle(PillButtonStyle(tint: Theme.danger))
+                    PillButton("Edit Habit", tint: Theme.muted) { isEditing = true }
+                    PillButton("Delete Habit", tint: Theme.danger, role: .destructive) { isConfirmingDelete = true }
                 }
             }
             .padding(.top, 2)
 
-            Text(habit.details)
+            Text(row.details)
                 .sansFont(12)
                 .foregroundStyle(Theme.textSecondary)
                 // Sidebar lists limit text to one line by default; show all of it.
@@ -55,7 +90,7 @@ struct HabitRowView: View {
             EditHabitView(habit: habit)
         }
         .confirmationDialog(
-            "Delete “\(habit.name)”?",
+            "Delete “\(row.name)”?",
             isPresented: $isConfirmingDelete
         ) {
             Button("Delete Habit", role: .destructive, action: deleteHabit)
@@ -87,10 +122,10 @@ struct HabitRowView: View {
     private var header: some View {
         HStack(alignment: .top, spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(habit.name)
+                Text(row.name)
                     .sansFont(15, weight: .semibold)
                     .foregroundStyle(Theme.textPrimary)
-                Text(habit.tickerLabel)
+                Text(row.tickerLabel)
                     .font(.mono(12))
                     .foregroundStyle(Theme.textSecondary)
             }
@@ -99,11 +134,11 @@ struct HabitRowView: View {
             Spacer(minLength: 8)
 
             VStack(alignment: .trailing, spacing: 4) {
-                Text("\(currency) \(habit.currentValue, specifier: "%.2f")")
+                Text("\(currency) \(row.currentValue, specifier: "%.2f")")
                     .font(.mono(15, weight: .semibold))
                     .monospacedDigit()
                     .foregroundStyle(Theme.textPrimary)
-                ChangeBadge(changePercent: habit.changePercent)
+                ChangeBadge(changePercent: row.changePercent)
             }
         }
     }
@@ -146,7 +181,7 @@ extension View {
 #Preview {
     let container = DummyData.previewContainer
     List(DummyData.previewHabits(in: container)) { habit in
-        HabitRowView(habit: habit, currency: AppConfig.currency)
+        HabitRowView(row: HabitRowModel(habit), currency: AppConfig.currency)
     }
     .listStyle(.sidebar)
     .frame(width: 340, height: 600)
