@@ -3,9 +3,8 @@
 //  Exchange-Traded Habits
 //
 //  Apple Intelligence features, using the on-device model from Apple's
-//  Foundation Models framework: analyzing the habit data, suggesting new
-//  habits and suggesting how to make a habit easier. Everything runs on
-//  this Mac; nothing is sent to a server.
+//  Foundation Models framework: analyzing the habit data and suggesting
+//  new habits. Everything runs on this Mac; nothing is sent to a server.
 //
 //  Roughly like calling an LLM API with "structured output" in Node: each
 //  @Generable struct below is the response schema, and the model is
@@ -63,24 +62,6 @@ nonisolated struct HabitSuggestion: Equatable {
 nonisolated struct HabitSuggestions: Equatable {
     @Guide(description: "Three different habits that address the user's problem.", .count(3))
     var habits: [HabitSuggestion]
-}
-
-/// A suggested change to an existing habit that makes it easier to do.
-/// Only covers what the Edit Habit form can change: the name and the
-/// description (built from the cue and the identity).
-@Generable
-nonisolated struct HabitEditSuggestion: Equatable {
-    @Guide(description: "The habit name in title case, adjusted to the smaller or easier version, one to three words, e.g. 'Short Walk'.")
-    var name: String
-
-    @Guide(description: "A better cue: an existing everyday moment that triggers the habit, NOT the habit's action itself. It completes the sentence \"I'll complete this habit when …\" and is lowercase, e.g. 'I put the kettle on' or 'I sit down at my desk'.")
-    var time: String
-
-    @Guide(description: "Who the user becomes through the habit. It completes the sentence \"… to become …\" and is lowercase.")
-    var identity: String
-
-    @Guide(description: "Two sentences explaining what changed and why it makes the habit easier.")
-    var reason: String
 }
 
 // MARK: - Requests
@@ -152,29 +133,6 @@ enum HabitAI {
             cleaned.identity = cleanPhrase(suggestion.identity, droppingPrefixes: ["to become", "become"])
             return cleaned
         }
-    }
-
-    /// Suggests how to make an existing habit easier, based on the problem
-    /// the user describes and the habit's recent history.
-    static func suggestEdit(for habit: Habit, problem: String) async throws -> HabitEditSuggestion {
-        let session = LanguageModelSession(instructions: coachInstructions + """
-             Help the user make an existing habit easier to perform, for example by making it smaller, \
-            tying it to a better cue that already happens every day, or reducing friction. \
-            Keep the habit's purpose the same.
-            """)
-        let prompt = """
-            My habit:
-            \(habitLine(habit))
-
-            What makes it hard: \(problem)
-
-            Suggest a changed version of this habit that is easier to perform.
-            """
-        var suggestion = try await session.respond(to: prompt, generating: HabitEditSuggestion.self, options: options).content
-        suggestion.name = cleanName(suggestion.name)
-        suggestion.time = cleanPhrase(suggestion.time, droppingPrefixes: ["I'll complete this habit when", "when"])
-        suggestion.identity = cleanPhrase(suggestion.identity, droppingPrefixes: ["to become", "become"])
-        return suggestion
     }
 
     // MARK: - Cleaning up the model's phrases
@@ -267,15 +225,6 @@ enum HabitAI {
         let done = recent.filter(\.completed).count
         let expected = max(Int((Double(recent.count) / habit.interval).rounded()), recent.isEmpty ? 0 : 1)
         return (recent.count, done, expected)
-    }
-
-    /// The habit furthest behind its goal recently, a good default for
-    /// "Make a Habit Easier".
-    static func habitNeedingHelp(in habits: [Habit]) -> Habit? {
-        habits.min { a, b in
-            let ra = recentRecord(a), rb = recentRecord(b)
-            return Double(ra.done) / Double(max(ra.expected, 1)) < Double(rb.done) / Double(max(rb.expected, 1))
-        }
     }
 
     /// One habit as a line of text, with its recent track record.

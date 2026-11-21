@@ -2,11 +2,10 @@
 //  InsightsView.swift
 //  Exchange-Traded Habits
 //
-//  The Apple Intelligence panel on the right (a macOS "inspector", like
-//  the one in Xcode or Keynote): analyze the habit data, suggest new
-//  habits for a problem, and suggest how to make a habit easier.
-//  Nothing runs until a button is pressed, and suggestions only open a
-//  pre-filled form, so nothing changes without the user confirming.
+//  The Apple Intelligence panel on the right: analyze the habit data and
+//  suggest new habits for a problem. Nothing runs until a button is
+//  pressed, and suggestions only open a pre-filled form, so nothing
+//  changes without the user confirming.
 //
 
 import SwiftData
@@ -40,19 +39,6 @@ struct InsightsView: View {
     @State private var suggestionsState = RequestState.idle
     @State private var addSheet: SheetItem<HabitSuggestion>?
 
-    // Make a habit easier
-    /// The picked habit, identified by object (like comparing JS objects by
-    /// reference). Its persistentModelID would change on its first save.
-    @State private var editHabitID: ObjectIdentifier?
-    @State private var editProblem = ""
-    @State private var editSuggestion: HabitEditSuggestion?
-    @State private var editState = RequestState.idle
-    @State private var editSheet: SheetItem<(Habit, HabitEditSuggestion)>?
-
-    private var editHabit: Habit? {
-        habits.first { ObjectIdentifier($0) == editHabitID }
-    }
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
@@ -67,23 +53,13 @@ struct InsightsView: View {
                     analysisSection
                     Divider()
                     newHabitsSection
-                    Divider()
-                    makeEasierSection
                 }
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .onAppear {
-            if editHabitID == nil {
-                editHabitID = HabitAI.habitNeedingHelp(in: habits).map(ObjectIdentifier.init)
-            }
-        }
         .sheet(item: $addSheet) { item in
             AddHabitView(prefill: item.value)
-        }
-        .sheet(item: $editSheet) { item in
-            EditHabitView(habit: item.value.0, suggestion: item.value.1)
         }
     }
 
@@ -167,64 +143,6 @@ struct InsightsView: View {
                 suggestionsState = .idle
             } catch {
                 suggestionsState = .failed(HabitAI.message(for: error))
-            }
-        }
-    }
-
-    // MARK: - Make a habit easier
-
-    private var makeEasierSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            header("Make a Habit Easier", "Pick a habit and describe what makes it hard. You'll get an easier version to review.")
-
-            if habits.isEmpty {
-                prose("Add a habit first.")
-            } else {
-                Picker("Habit", selection: $editHabitID) {
-                    ForEach(habits) { habit in
-                        Text(habit.name).tag(Optional(ObjectIdentifier(habit)))
-                    }
-                }
-                .onChange(of: editHabitID) {
-                    // A suggestion for another habit no longer applies.
-                    editSuggestion = nil
-                    editState = .idle
-                }
-
-                problemField($editProblem, prompt: "e.g. I always forget it because my mornings are rushed.")
-                runButton("Suggest Changes", state: editState, action: suggestEdit)
-                    .disabled(editHabit == nil || trimmed(editProblem).isEmpty)
-                errorText(editState)
-
-                if let editSuggestion, let editHabit {
-                    card {
-                        Text(editSuggestion.name)
-                            .sansFont(14, weight: .semibold)
-                            .foregroundStyle(Theme.textPrimary)
-                        prose(Habit.makeDetails(
-                            interval: editHabit.interval, time: editSuggestion.time, identity: editSuggestion.identity
-                        ))
-                        prose(editSuggestion.reason, italic: true)
-                        Button("Review Changes…", systemImage: "pencil") {
-                            editSheet = SheetItem(value: (editHabit, editSuggestion))
-                        }
-                        .habitButtonStyle()
-                        .controlSize(.small)
-                    }
-                }
-            }
-        }
-    }
-
-    private func suggestEdit() {
-        guard let editHabit else { return }
-        editState = .running
-        Task {
-            do {
-                editSuggestion = try await HabitAI.suggestEdit(for: editHabit, problem: trimmed(editProblem))
-                editState = .idle
-            } catch {
-                editState = .failed(HabitAI.message(for: error))
             }
         }
     }

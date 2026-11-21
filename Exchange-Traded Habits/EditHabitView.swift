@@ -23,18 +23,13 @@ struct EditHabitView: View {
     @State private var interval: Double
     @State private var details: String
 
-    /// `suggestion` is an optional Apple Intelligence suggestion that
-    /// pre-fills a new name and description; nothing is saved until
-    /// "Save Changes" is pressed.
-    init(habit: Habit, suggestion: HabitEditSuggestion? = nil) {
+    init(habit: Habit) {
         self.habit = habit
-        _name = State(initialValue: suggestion?.name ?? habit.name)
+        _name = State(initialValue: habit.name)
         _shortName = State(initialValue: habit.shortName)
         _initialValue = State(initialValue: habit.initialValue)
         _interval = State(initialValue: habit.interval)
-        _details = State(initialValue: suggestion.map {
-            Habit.makeDetails(interval: habit.interval, time: $0.time, identity: $0.identity)
-        } ?? habit.details)
+        _details = State(initialValue: habit.details)
     }
 
     private func trimmed(_ text: String) -> String {
